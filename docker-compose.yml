@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 数据库服务
+  db:
+    image: mysql:8.0
+    container_name: dts-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 941001zhigang!H
+      MYSQL_DATABASE: dts_system
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 941001zhigang!H
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - dts-network
+    restart: always
+
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+    container_name: dts-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/dts_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 941001zhigang!H
+    depends_on:
+      - db
+    networks:
+      - dts-network
+    restart: always
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+    container_name: dts-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - dts-network
+    restart: always
+
+networks:
+  dts-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
