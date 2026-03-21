@@ -6,10 +6,10 @@ services:
     image: mysql:8.0
     container_name: dts-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: 941001zhigang!H
+      MYSQL_ROOT_PASSWORD: Mysql1314159!
       MYSQL_DATABASE: dts_system
       MYSQL_USER: root
-      MYSQL_PASSWORD: 941001zhigang!H
+      MYSQL_PASSWORD: Mysql1314159!
     ports:
       - "3306:3306"
     volumes:
@@ -28,7 +28,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/dts_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 941001zhigang!H
+      SPRING_DATASOURCE_PASSWORD: Mysql1314159!
     depends_on:
       - db
     networks:
