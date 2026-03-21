@@ -2,6 +2,9 @@ package com.dts.system.service;
 
 import com.dts.system.model.Issue;
 import com.dts.system.repository.IssueRepository;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,7 +12,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,6 +46,8 @@ public class IssueServiceTest {
         testIssue.setPriority("HIGH");
         testIssue.setStatus("OPEN");
         testIssue.setReporterId(1L);
+        testIssue.setCreatedAt(new Date());
+        testIssue.setUpdatedAt(new Date());
     }
 
     @Test
@@ -280,5 +288,256 @@ public class IssueServiceTest {
         assertNull(result);
         verify(issueRepository, times(1)).findById(999L);
         verify(issueRepository, never()).save(any(Issue.class));
+    }
+
+    // 筛选功能测试
+    @Test
+    void testFilterIssues_ByStatus() {
+        // 准备
+        Issue issue2 = new Issue();
+        issue2.setId(2L);
+        issue2.setTitle("第二个问题单");
+        issue2.setStatus("CLOSED");
+        
+        when(issueRepository.findAll()).thenReturn(Arrays.asList(testIssue, issue2));
+
+        // 执行
+        List<Issue> result = issueService.filterIssues("OPEN", null, null, null, null);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("OPEN", result.get(0).getStatus());
+        verify(issueRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testFilterIssues_ByPriority() {
+        // 准备
+        Issue issue2 = new Issue();
+        issue2.setId(2L);
+        issue2.setTitle("第二个问题单");
+        issue2.setPriority("LOW");
+        
+        when(issueRepository.findAll()).thenReturn(Arrays.asList(testIssue, issue2));
+
+        // 执行
+        List<Issue> result = issueService.filterIssues(null, "HIGH", null, null, null);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("HIGH", result.get(0).getPriority());
+        verify(issueRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testFilterIssues_ByProcessStatus() {
+        // 准备
+        testIssue.setProcessStatus("SUBMITTED");
+        Issue issue2 = new Issue();
+        issue2.setId(2L);
+        issue2.setTitle("第二个问题单");
+        issue2.setProcessStatus("DEVELOPING");
+        
+        when(issueRepository.findAll()).thenReturn(Arrays.asList(testIssue, issue2));
+
+        // 执行
+        List<Issue> result = issueService.filterIssues(null, null, "SUBMITTED", null, null);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("SUBMITTED", result.get(0).getProcessStatus());
+        verify(issueRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testFilterIssues_ByReporterId() {
+        // 准备
+        Issue issue2 = new Issue();
+        issue2.setId(2L);
+        issue2.setTitle("第二个问题单");
+        issue2.setReporterId(2L);
+        
+        when(issueRepository.findAll()).thenReturn(Arrays.asList(testIssue, issue2));
+
+        // 执行
+        List<Issue> result = issueService.filterIssues(null, null, null, 1L, null);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).getReporterId());
+        verify(issueRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testFilterIssues_ByAssigneeId() {
+        // 准备
+        testIssue.setAssigneeId(1L);
+        Issue issue2 = new Issue();
+        issue2.setId(2L);
+        issue2.setTitle("第二个问题单");
+        issue2.setAssigneeId(2L);
+        
+        when(issueRepository.findAll()).thenReturn(Arrays.asList(testIssue, issue2));
+
+        // 执行
+        List<Issue> result = issueService.filterIssues(null, null, null, null, 1L);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).getAssigneeId());
+        verify(issueRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testFilterIssues_AllParameters() {
+        // 准备
+        testIssue.setProcessStatus("SUBMITTED");
+        Issue issue2 = new Issue();
+        issue2.setId(2L);
+        issue2.setTitle("第二个问题单");
+        issue2.setStatus("CLOSED");
+        issue2.setPriority("LOW");
+        issue2.setProcessStatus("DEVELOPING");
+        issue2.setReporterId(2L);
+        issue2.setAssigneeId(2L);
+        
+        when(issueRepository.findAll()).thenReturn(Arrays.asList(testIssue, issue2));
+
+        // 执行
+        List<Issue> result = issueService.filterIssues("OPEN", "HIGH", "SUBMITTED", 1L, null);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("OPEN", result.get(0).getStatus());
+        assertEquals("HIGH", result.get(0).getPriority());
+        assertEquals("SUBMITTED", result.get(0).getProcessStatus());
+        assertEquals(1L, result.get(0).getReporterId());
+        verify(issueRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testFilterIssues_NoFilters() {
+        // 准备
+        Issue issue2 = new Issue();
+        issue2.setId(2L);
+        issue2.setTitle("第二个问题单");
+        
+        when(issueRepository.findAll()).thenReturn(Arrays.asList(testIssue, issue2));
+
+        // 执行
+        List<Issue> result = issueService.filterIssues(null, null, null, null, null);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        verify(issueRepository, times(1)).findAll();
+    }
+
+    // 导出Excel功能测试
+    @Test
+    void testExportIssuesToExcel() throws Exception {
+        // 准备
+        Issue issue2 = new Issue();
+        issue2.setId(2L);
+        issue2.setTitle("第二个问题单");
+        issue2.setDescription("这是第二个测试问题单");
+        issue2.setPriority("LOW");
+        issue2.setStatus("CLOSED");
+        issue2.setProcessStatus("COMPLETED");
+        issue2.setReviewStatus("APPROVED");
+        issue2.setReviewComment("审核通过");
+        issue2.setResolution("已修复");
+        issue2.setRegressionResult("回归通过");
+        issue2.setReporterId(1L);
+        issue2.setAssigneeId(2L);
+        issue2.setCreatedAt(new Date());
+        issue2.setUpdatedAt(new Date());
+        
+        List<Issue> issues = Arrays.asList(testIssue, issue2);
+
+        // 执行
+        ByteArrayOutputStream outputStream = issueService.exportIssuesToExcel(issues);
+
+        // 验证
+        assertNotNull(outputStream);
+        assertTrue(outputStream.size() > 0);
+
+        // 验证Excel文件内容
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(outputStream.toByteArray()))) {
+            Sheet sheet = workbook.getSheet("问题单列表");
+            assertNotNull(sheet);
+            assertEquals(3, sheet.getPhysicalNumberOfRows()); // 1 header + 2 data rows
+            
+            // 验证表头
+            assertEquals("ID", sheet.getRow(0).getCell(0).getStringCellValue());
+            assertEquals("标题", sheet.getRow(0).getCell(1).getStringCellValue());
+            assertEquals("描述", sheet.getRow(0).getCell(2).getStringCellValue());
+            
+            // 验证第一行数据
+            assertEquals(1, (int) sheet.getRow(1).getCell(0).getNumericCellValue());
+            assertEquals("测试问题单", sheet.getRow(1).getCell(1).getStringCellValue());
+            
+            // 验证第二行数据
+            assertEquals(2, (int) sheet.getRow(2).getCell(0).getNumericCellValue());
+            assertEquals("第二个问题单", sheet.getRow(2).getCell(1).getStringCellValue());
+        }
+    }
+
+    @Test
+    void testExportIssuesToExcel_EmptyList() throws Exception {
+        // 准备
+        List<Issue> issues = Arrays.asList();
+
+        // 执行
+        ByteArrayOutputStream outputStream = issueService.exportIssuesToExcel(issues);
+
+        // 验证
+        assertNotNull(outputStream);
+        assertTrue(outputStream.size() > 0);
+
+        // 验证Excel文件内容
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(outputStream.toByteArray()))) {
+            Sheet sheet = workbook.getSheet("问题单列表");
+            assertNotNull(sheet);
+            assertEquals(1, sheet.getPhysicalNumberOfRows()); // 只有表头
+            
+            // 验证表头
+            assertEquals("ID", sheet.getRow(0).getCell(0).getStringCellValue());
+        }
+    }
+
+    @Test
+    void testExportIssuesToExcel_WithNullFields() throws Exception {
+        // 准备
+        Issue issueWithNulls = new Issue();
+        issueWithNulls.setId(1L);
+        issueWithNulls.setTitle("问题单");
+        // 其他字段保持null
+        
+        List<Issue> issues = Arrays.asList(issueWithNulls);
+
+        // 执行
+        ByteArrayOutputStream outputStream = issueService.exportIssuesToExcel(issues);
+
+        // 验证
+        assertNotNull(outputStream);
+        assertTrue(outputStream.size() > 0);
+
+        // 验证Excel文件内容
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(outputStream.toByteArray()))) {
+            Sheet sheet = workbook.getSheet("问题单列表");
+            assertNotNull(sheet);
+            assertEquals(2, sheet.getPhysicalNumberOfRows()); // 1 header + 1 data row
+            
+            // 验证数据行
+            assertEquals(1, (int) sheet.getRow(1).getCell(0).getNumericCellValue());
+            assertEquals("问题单", sheet.getRow(1).getCell(1).getStringCellValue());
+        }
     }
 }

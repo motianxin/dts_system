@@ -41,6 +41,46 @@
       </div>
     </div>
     
+    <!-- 筛选和导出功能 -->
+    <div class="filter-section">
+      <h3>筛选问题单</h3>
+      <div class="filter-form">
+        <div class="filter-group">
+          <label for="filterStatus">状态</label>
+          <select id="filterStatus" v-model="filterParams.status">
+            <option value="">全部</option>
+            <option value="OPEN">开放</option>
+            <option value="CLOSED">关闭</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterPriority">优先级</label>
+          <select id="filterPriority" v-model="filterParams.priority">
+            <option value="">全部</option>
+            <option value="LOW">低</option>
+            <option value="MEDIUM">中</option>
+            <option value="HIGH">高</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterProcessStatus">流程状态</label>
+          <select id="filterProcessStatus" v-model="filterParams.processStatus">
+            <option value="">全部</option>
+            <option value="SUBMITTED">已提交</option>
+            <option value="DEVELOPING">开发中</option>
+            <option value="DEVELOPMENT_REVIEWING">开发审核中</option>
+            <option value="REGRESSING">回归中</option>
+            <option value="COMPLETED">已完成</option>
+          </select>
+        </div>
+        <div class="filter-buttons">
+          <button @click="applyFilter" class="filter-btn">筛选</button>
+          <button @click="resetFilter" class="reset-btn">重置</button>
+          <button @click="exportToExcel" class="export-btn">导出Excel</button>
+        </div>
+      </div>
+    </div>
+    
     <!-- 问题单列表 -->
     <div class="issues-list">
       <h3>问题单列表</h3>
@@ -82,7 +122,7 @@
 export default {
   data() {
     return {
-      userRole: 'TESTER', // 这里应该从登录状态获取
+      userRole: 'TESTER',
       newIssue: {
         title: '',
         description: '',
@@ -91,7 +131,14 @@ export default {
       issues: [],
       pendingIssues: 0,
       resolvedIssues: 0,
-      totalIssues: 0
+      totalIssues: 0,
+      filterParams: {
+        status: '',
+        priority: '',
+        processStatus: '',
+        reporterId: null,
+        assigneeId: null
+      }
     };
   },
   mounted() {
@@ -99,9 +146,7 @@ export default {
   },
   methods: {
     handleLogout() {
-      // 这里可以添加退出登录逻辑
       console.log('退出登录');
-      // 跳转到登录页
       this.$router.push('/login');
     },
     async createIssue() {
@@ -113,7 +158,7 @@ export default {
           },
           body: JSON.stringify({
             ...this.newIssue,
-            reporterId: 1, // 这里应该从登录用户获取
+            reporterId: 1,
             assigneeId: null
           })
         });
@@ -143,6 +188,79 @@ export default {
         console.error('加载问题单失败:', error);
       }
     },
+    async applyFilter() {
+      try {
+        const params = new URLSearchParams();
+        if (this.filterParams.status) params.append('status', this.filterParams.status);
+        if (this.filterParams.priority) params.append('priority', this.filterParams.priority);
+        if (this.filterParams.processStatus) params.append('processStatus', this.filterParams.processStatus);
+        if (this.filterParams.reporterId) params.append('reporterId', this.filterParams.reporterId);
+        if (this.filterParams.assigneeId) params.append('assigneeId', this.filterParams.assigneeId);
+        
+        const response = await fetch(`http://localhost:8080/api/issues/filter?${params.toString()}`);
+        const result = await response.json();
+        if (response.ok) {
+          this.issues = result;
+        }
+      } catch (error) {
+        console.error('筛选问题单失败:', error);
+        alert('筛选失败: ' + error.message);
+      }
+    },
+    resetFilter() {
+      this.filterParams = {
+        status: '',
+        priority: '',
+        processStatus: '',
+        reporterId: null,
+        assigneeId: null
+      };
+      this.loadIssues();
+    },
+    async exportToExcel() {
+      try {
+        const params = new URLSearchParams();
+        if (this.filterParams.status) params.append('status', this.filterParams.status);
+        if (this.filterParams.priority) params.append('priority', this.filterParams.priority);
+        if (this.filterParams.processStatus) params.append('processStatus', this.filterParams.processStatus);
+        if (this.filterParams.reporterId) params.append('reporterId', this.filterParams.reporterId);
+        if (this.filterParams.assigneeId) params.append('assigneeId', this.filterParams.assigneeId);
+        
+        const response = await fetch(`http://localhost:8080/api/issues/export?${params.toString()}`);
+        if (response.ok) {
+          const blob = await response.blob();
+          const contentDisposition = response.headers.get('Content-Disposition');
+          let fileName = 'issues.xlsx';
+          if (contentDisposition) {
+            const fileNameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)/);
+            if (fileNameMatch && fileNameMatch[1]) {
+              fileName = decodeURIComponent(fileNameMatch[1]);
+            } else {
+              const simpleMatch = contentDisposition.match(/filename="?(.+?)"?(;|$)/);
+              if (simpleMatch && simpleMatch[1]) {
+                fileName = simpleMatch[1];
+              }
+            }
+          }
+          
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          alert('导出成功');
+        } else {
+          alert('导出失败');
+        }
+      } catch (error) {
+        console.error('导出失败:', error);
+        alert('导出失败: ' + error.message);
+      }
+    },
     async submitIssue(id) {
       try {
         const response = await fetch(`http://localhost:8080/api/issues/${id}/submit`, {
@@ -160,7 +278,6 @@ export default {
       }
     },
     reviewIssue(id) {
-      // 这里可以打开审核对话框
       const reviewStatus = prompt('请输入审核状态 (APPROVED/REJECTED):');
       const reviewComment = prompt('请输入审核意见:');
       if (reviewStatus && reviewComment) {
@@ -188,7 +305,6 @@ export default {
       }
     },
     resolveIssue(id) {
-      // 这里可以打开处理对话框
       const resolution = prompt('请输入处理结果:');
       if (resolution) {
         this.doResolveIssue(id, resolution);
@@ -215,7 +331,6 @@ export default {
       }
     },
     reviewResolution(id) {
-      // 这里可以打开审核处理结果对话框
       const reviewStatus = prompt('请输入审核状态 (APPROVED/REJECTED):');
       const reviewComment = prompt('请输入审核意见:');
       if (reviewStatus && reviewComment) {
@@ -243,7 +358,6 @@ export default {
       }
     },
     completeRegression(id) {
-      // 这里可以打开回归对话框
       const regressionResult = prompt('请输入回归结果:');
       if (regressionResult) {
         this.doCompleteRegression(id, regressionResult);
@@ -366,6 +480,83 @@ h3 {
   font-size: 24px;
   font-weight: bold;
   color: #4CAF50;
+}
+
+.filter-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+.filter-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-btn,
+.reset-btn,
+.export-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.filter-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.filter-btn:hover {
+  background-color: #0b7dda;
+}
+
+.reset-btn {
+  background-color: #ff9800;
+  color: white;
+}
+
+.reset-btn:hover {
+  background-color: #e68900;
+}
+
+.export-btn {
+  background-color: #9c27b0;
+  color: white;
+}
+
+.export-btn:hover {
+  background-color: #7b1fa2;
 }
 
 .issues-list {

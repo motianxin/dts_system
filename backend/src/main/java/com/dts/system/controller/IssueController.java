@@ -3,9 +3,18 @@ package com.dts.system.controller;
 import com.dts.system.model.Issue;
 import com.dts.system.service.IssueService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.io.ByteArrayOutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -161,6 +170,46 @@ public class IssueController {
             }
         } catch (Exception e) {
             return new ResponseEntity<>("Failed to complete regression: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // 筛选问题单API
+    @GetMapping("/filter")
+    public ResponseEntity<List<Issue>> filterIssues(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String processStatus,
+            @RequestParam(required = false) Long reporterId,
+            @RequestParam(required = false) Long assigneeId) {
+        List<Issue> filteredIssues = issueService.filterIssues(status, priority, processStatus, reporterId, assigneeId);
+        return new ResponseEntity<>(filteredIssues, HttpStatus.OK);
+    }
+
+    // 导出问题单到Excel API
+    @GetMapping("/export")
+    public ResponseEntity<Resource> exportIssuesToExcel(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String processStatus,
+            @RequestParam(required = false) Long reporterId,
+            @RequestParam(required = false) Long assigneeId) {
+        try {
+            List<Issue> issues = issueService.filterIssues(status, priority, processStatus, reporterId, assigneeId);
+            ByteArrayOutputStream outputStream = issueService.exportIssuesToExcel(issues);
+            
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+            String fileName = "issues_" + dateFormat.format(new Date()) + ".xlsx";
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+            
+            ByteArrayResource resource = new ByteArrayResource(outputStream.toByteArray());
+            
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(resource.contentLength())
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

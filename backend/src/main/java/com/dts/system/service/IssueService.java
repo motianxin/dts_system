@@ -1,6 +1,7 @@
 package com.dts.system.service;
 
 import com.dts.system.model.Issue;
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 public interface IssueService {
@@ -17,4 +18,7 @@ public interface IssueService {
     Issue reviewResolution(Long id, String reviewStatus, String reviewComment); // 开发经理审核处理结果
     Issue assignToTester(Long id, Long testerId); // 分配给测试人员回归
     Issue completeRegression(Long id, String regressionResult); // 完成回归
+    // 筛选和导出方法
+    List<Issue> filterIssues(String status, String priority, String processStatus, Long reporterId, Long assigneeId);
+    ByteArrayOutputStream exportIssuesToExcel(List<Issue> issues) throws Exception;
 }
