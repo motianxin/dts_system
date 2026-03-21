@@ -108,8 +108,8 @@ CREATE DATABASE dts_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 修改 `backend/src/main/resources/application.properties` 中的数据库配置：
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/dts_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
-spring.datasource.username=root
-spring.datasource.password=your_password
+spring.datasource.username=zhigang
+spring.datasource.password=Mysql1314159!
 ```
 
 #### 3. 运行后端

@@ -8,7 +8,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: Mysql1314159!
       MYSQL_DATABASE: dts_system
-      MYSQL_USER: root
+      MYSQL_USER: zhigang
       MYSQL_PASSWORD: Mysql1314159!
     ports:
       - "3306:3306"
