@@ -302,7 +302,6 @@ public class IssueServiceImpl implements IssueService {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
             cell.setCellStyle(headerStyle);
-            sheet.autoSizeColumn(i);
         }
         
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -326,9 +325,55 @@ public class IssueServiceImpl implements IssueService {
             row.createCell(12).setCellValue(issue.getCreatedAt() != null ? dateFormat.format(issue.getCreatedAt()) : "");
             row.createCell(13).setCellValue(issue.getUpdatedAt() != null ? dateFormat.format(issue.getUpdatedAt()) : "");
             
-            for (int j = 0; j < headers.length; j++) {
-                sheet.autoSizeColumn(j);
-            }
+        }
+        
+        // 计算每列的最大宽度
+        int[] maxWidths = new int[headers.length];
+        
+        // 先计算表头的宽度
+        for (int j = 0; j < headers.length; j++) {
+            maxWidths[j] = headers[j].length();
+        }
+        
+        // 计算数据行的宽度
+        for (int i = 0; i < issues.size(); i++) {
+            Issue issue = issues.get(i);
+            
+            // ID
+            maxWidths[0] = Math.max(maxWidths[0], String.valueOf(issue.getId() != null ? issue.getId() : 0).length());
+            // 标题
+            maxWidths[1] = Math.max(maxWidths[1], (issue.getTitle() != null ? issue.getTitle() : "").length());
+            // 描述
+            maxWidths[2] = Math.max(maxWidths[2], (issue.getDescription() != null ? issue.getDescription() : "").length());
+            // 状态
+            maxWidths[3] = Math.max(maxWidths[3], (issue.getStatus() != null ? issue.getStatus() : "").length());
+            // 优先级
+            maxWidths[4] = Math.max(maxWidths[4], (issue.getPriority() != null ? issue.getPriority() : "").length());
+            // 流程状态
+            maxWidths[5] = Math.max(maxWidths[5], (issue.getProcessStatus() != null ? issue.getProcessStatus() : "").length());
+            // 审核状态
+            maxWidths[6] = Math.max(maxWidths[6], (issue.getReviewStatus() != null ? issue.getReviewStatus() : "").length());
+            // 审核意见
+            maxWidths[7] = Math.max(maxWidths[7], (issue.getReviewComment() != null ? issue.getReviewComment() : "").length());
+            // 处理结果
+            maxWidths[8] = Math.max(maxWidths[8], (issue.getResolution() != null ? issue.getResolution() : "").length());
+            // 回归结果
+            maxWidths[9] = Math.max(maxWidths[9], (issue.getRegressionResult() != null ? issue.getRegressionResult() : "").length());
+            // 报告人ID
+            maxWidths[10] = Math.max(maxWidths[10], String.valueOf(issue.getReporterId() != null ? issue.getReporterId() : 0).length());
+            // 指派人ID
+            maxWidths[11] = Math.max(maxWidths[11], String.valueOf(issue.getAssigneeId() != null ? issue.getAssigneeId() : 0).length());
+            // 创建时间
+            maxWidths[12] = Math.max(maxWidths[12], (issue.getCreatedAt() != null ? dateFormat.format(issue.getCreatedAt()) : "").length());
+            // 更新时间
+            maxWidths[13] = Math.max(maxWidths[13], (issue.getUpdatedAt() != null ? dateFormat.format(issue.getUpdatedAt()) : "").length());
+        }
+        
+        // 设置每列的宽度（256是一个字符的宽度单位，乘以2是为了给中文字符留出空间）
+        for (int j = 0; j < headers.length; j++) {
+            // 为中文字符和边距留出空间
+            int width = (maxWidths[j] + 2) * 256 * 2;
+            sheet.setColumnWidth(j, width);
         }
         
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
