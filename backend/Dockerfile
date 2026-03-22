@@ -1,20 +1,22 @@
 # 后端Dockerfile
 FROM eclipse-temurin:21-jdk-alpine
 
+# 安装Maven
+RUN apk add --no-cache maven
+
 WORKDIR /app
 
 # 复制Maven依赖文件
 COPY pom.xml .
-COPY .mvn .mvn
 
 # 下载依赖
-RUN ./mvnw dependency:go-offline
+RUN mvn dependency:go-offline
 
 # 复制源代码
 COPY src src
 
 # 构建项目
-RUN ./mvnw package -DskipTests
+RUN mvn package -DskipTests
 
 # 暴露端口
 EXPOSE 8080

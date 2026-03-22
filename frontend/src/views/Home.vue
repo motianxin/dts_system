@@ -151,7 +151,7 @@ export default {
     },
     async createIssue() {
       try {
-        const response = await fetch('http://localhost:8080/api/issues', {
+        const response = await fetch('/api/issues', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -176,7 +176,7 @@ export default {
     },
     async loadIssues() {
       try {
-        const response = await fetch('http://localhost:8080/api/issues');
+        const response = await fetch('/api/issues');
         const result = await response.json();
         if (response.ok) {
           this.issues = result;
@@ -197,7 +197,7 @@ export default {
         if (this.filterParams.reporterId) params.append('reporterId', this.filterParams.reporterId);
         if (this.filterParams.assigneeId) params.append('assigneeId', this.filterParams.assigneeId);
         
-        const response = await fetch(`http://localhost:8080/api/issues/filter?${params.toString()}`);
+        const response = await fetch(`/api/issues/filter?${params.toString()}`);
         const result = await response.json();
         if (response.ok) {
           this.issues = result;
@@ -226,7 +226,7 @@ export default {
         if (this.filterParams.reporterId) params.append('reporterId', this.filterParams.reporterId);
         if (this.filterParams.assigneeId) params.append('assigneeId', this.filterParams.assigneeId);
         
-        const response = await fetch(`http://localhost:8080/api/issues/export?${params.toString()}`);
+        const response = await fetch(`/api/issues/export?${params.toString()}`);
         if (response.ok) {
           const blob = await response.blob();
           const contentDisposition = response.headers.get('Content-Disposition');
@@ -263,7 +263,7 @@ export default {
     },
     async submitIssue(id) {
       try {
-        const response = await fetch(`http://localhost:8080/api/issues/${id}/submit`, {
+        const response = await fetch(`/api/issues/${id}/submit`, {
           method: 'POST'
         });
         if (response.ok) {
@@ -286,7 +286,7 @@ export default {
     },
     async doReviewIssue(id, reviewStatus, reviewComment) {
       try {
-        const response = await fetch(`http://localhost:8080/api/issues/${id}/review`, {
+        const response = await fetch(`/api/issues/${id}/review`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -312,7 +312,7 @@ export default {
     },
     async doResolveIssue(id, resolution) {
       try {
-        const response = await fetch(`http://localhost:8080/api/issues/${id}/resolve`, {
+        const response = await fetch(`/api/issues/${id}/resolve`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -339,7 +339,7 @@ export default {
     },
     async doReviewResolution(id, reviewStatus, reviewComment) {
       try {
-        const response = await fetch(`http://localhost:8080/api/issues/${id}/review-resolution`, {
+        const response = await fetch(`/api/issues/${id}/review-resolution`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -365,7 +365,7 @@ export default {
     },
     async doCompleteRegression(id, regressionResult) {
       try {
-        const response = await fetch(`http://localhost:8080/api/issues/${id}/complete-regression`, {
+        const response = await fetch(`/api/issues/${id}/complete-regression`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'

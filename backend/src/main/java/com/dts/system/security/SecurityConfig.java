@@ -24,6 +24,7 @@ public class SecurityConfig {
             .csrf().disable()
             .authorizeRequests()
             .requestMatchers("/api/users/register", "/api/users/login").permitAll()
+            .requestMatchers("/api/**").permitAll()
             .anyRequest().authenticated()
             .and()
             .httpBasic();
