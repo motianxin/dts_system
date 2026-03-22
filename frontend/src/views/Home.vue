@@ -76,7 +76,26 @@
         <div class="filter-buttons">
           <button @click="applyFilter" class="filter-btn">筛选</button>
           <button @click="resetFilter" class="reset-btn">重置</button>
-          <button @click="exportToExcel" class="export-btn">导出Excel</button>
+          <div class="export-section">
+            <button @click="showColumnSelection = !showColumnSelection" class="column-btn">选择列</button>
+            <button @click="exportToExcel" class="export-btn">导出Excel</button>
+            
+            <!-- 列选择面板 -->
+            <div v-if="showColumnSelection" class="column-selection-panel">
+              <h4>选择导出列</h4>
+              <div class="column-options">
+                <div v-for="column in exportColumns" :key="column.id" class="column-option">
+                  <input type="checkbox" :id="'column-' + column.id" v-model="column.selected">
+                  <label :for="'column-' + column.id">{{ column.name }}</label>
+                </div>
+              </div>
+              <div class="column-actions">
+                <button @click="selectAllColumns" class="action-btn">全选</button>
+                <button @click="deselectAllColumns" class="action-btn">全不选</button>
+                <button @click="showColumnSelection = false" class="action-btn">确定</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -138,7 +157,24 @@ export default {
         processStatus: '',
         reporterId: null,
         assigneeId: null
-      }
+      },
+      exportColumns: [
+        { id: 'id', name: 'ID', selected: true },
+        { id: 'title', name: '标题', selected: true },
+        { id: 'description', name: '描述', selected: true },
+        { id: 'status', name: '状态', selected: true },
+        { id: 'priority', name: '优先级', selected: true },
+        { id: 'processStatus', name: '流程状态', selected: true },
+        { id: 'reviewStatus', name: '审核状态', selected: true },
+        { id: 'reviewComment', name: '审核意见', selected: true },
+        { id: 'resolution', name: '处理结果', selected: true },
+        { id: 'regressionResult', name: '回归结果', selected: true },
+        { id: 'reporterId', name: '报告人ID', selected: true },
+        { id: 'assigneeId', name: '指派人ID', selected: true },
+        { id: 'createdAt', name: '创建时间', selected: true },
+        { id: 'updatedAt', name: '更新时间', selected: true }
+      ],
+      showColumnSelection: false
     };
   },
   mounted() {
@@ -217,6 +253,16 @@ export default {
       };
       this.loadIssues();
     },
+    selectAllColumns() {
+      this.exportColumns.forEach(column => {
+        column.selected = true;
+      });
+    },
+    deselectAllColumns() {
+      this.exportColumns.forEach(column => {
+        column.selected = false;
+      });
+    },
     async exportToExcel() {
       try {
         const params = new URLSearchParams();
@@ -225,6 +271,12 @@ export default {
         if (this.filterParams.processStatus) params.append('processStatus', this.filterParams.processStatus);
         if (this.filterParams.reporterId) params.append('reporterId', this.filterParams.reporterId);
         if (this.filterParams.assigneeId) params.append('assigneeId', this.filterParams.assigneeId);
+        
+        // 添加选中的列信息
+        const selectedColumns = this.exportColumns.filter(col => col.selected).map(col => col.id);
+        selectedColumns.forEach(col => {
+          params.append('columns', col);
+        });
         
         const response = await fetch(`/api/issues/export?${params.toString()}`);
         if (response.ok) {
@@ -557,6 +609,82 @@ h3 {
 
 .export-btn:hover {
   background-color: #7b1fa2;
+}
+
+.column-btn {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
+  font-size: 14px;
+}
+
+.column-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.export-section {
+  position: relative;
+  display: inline-block;
+}
+
+.column-selection-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.column-selection-panel h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.column-options {
+  margin-bottom: 15px;
+}
+
+.column-option {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.column-option input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.column-actions {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+}
+
+.column-actions .action-btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+}
+
+.column-actions .action-btn:hover {
+  background-color: #e0e0e0;
 }
 
 .issues-list {

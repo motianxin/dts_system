@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Date;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.function.Function;
 
 @Service
 public class IssueServiceImpl implements IssueService {
@@ -283,6 +285,11 @@ public class IssueServiceImpl implements IssueService {
 
     @Override
     public ByteArrayOutputStream exportIssuesToExcel(List<Issue> issues) throws Exception {
+        return exportIssuesToExcel(issues, null);
+    }
+    
+    @Override
+    public ByteArrayOutputStream exportIssuesToExcel(List<Issue> issues, List<String> columns) throws Exception {
         try {
             Workbook workbook = new XSSFWorkbook();
             Sheet sheet = workbook.createSheet("问题单列表");
@@ -294,83 +301,88 @@ public class IssueServiceImpl implements IssueService {
         headerFont.setBold(true);
         headerStyle.setFont(headerFont);
         
-        String[] headers = {"ID", "标题", "描述", "状态", "优先级", "流程状态", "审核状态", "审核意见", 
-                          "处理结果", "回归结果", "报告人ID", "指派人ID", "创建时间", "更新时间"};
+        // 定义所有列的信息
+        List<ColumnInfo> allColumns = new ArrayList<>();
+        allColumns.add(new ColumnInfo("id", "ID", issue -> String.valueOf(issue.getId() != null ? issue.getId() : 0)));
+        allColumns.add(new ColumnInfo("title", "标题", issue -> issue.getTitle() != null ? issue.getTitle() : ""));
+        allColumns.add(new ColumnInfo("description", "描述", issue -> issue.getDescription() != null ? issue.getDescription() : ""));
+        allColumns.add(new ColumnInfo("status", "状态", issue -> issue.getStatus() != null ? issue.getStatus() : ""));
+        allColumns.add(new ColumnInfo("priority", "优先级", issue -> issue.getPriority() != null ? issue.getPriority() : ""));
+        allColumns.add(new ColumnInfo("processStatus", "流程状态", issue -> issue.getProcessStatus() != null ? issue.getProcessStatus() : ""));
+        allColumns.add(new ColumnInfo("reviewStatus", "审核状态", issue -> issue.getReviewStatus() != null ? issue.getReviewStatus() : ""));
+        allColumns.add(new ColumnInfo("reviewComment", "审核意见", issue -> issue.getReviewComment() != null ? issue.getReviewComment() : ""));
+        allColumns.add(new ColumnInfo("resolution", "处理结果", issue -> issue.getResolution() != null ? issue.getResolution() : ""));
+        allColumns.add(new ColumnInfo("regressionResult", "回归结果", issue -> issue.getRegressionResult() != null ? issue.getRegressionResult() : ""));
+        allColumns.add(new ColumnInfo("reporterId", "报告人ID", issue -> String.valueOf(issue.getReporterId() != null ? issue.getReporterId() : 0)));
+        allColumns.add(new ColumnInfo("assigneeId", "指派人ID", issue -> String.valueOf(issue.getAssigneeId() != null ? issue.getAssigneeId() : 0)));
         
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        allColumns.add(new ColumnInfo("createdAt", "创建时间", issue -> issue.getCreatedAt() != null ? dateFormat.format(issue.getCreatedAt()) : ""));
+        allColumns.add(new ColumnInfo("updatedAt", "更新时间", issue -> issue.getUpdatedAt() != null ? dateFormat.format(issue.getUpdatedAt()) : ""));
+        
+        // 确定要导出的列
+        List<ColumnInfo> selectedColumns;
+        if (columns == null || columns.isEmpty()) {
+            // 默认导出所有列
+            selectedColumns = allColumns;
+        } else {
+            // 只导出选中的列
+            selectedColumns = new ArrayList<>();
+            for (String columnId : columns) {
+                for (ColumnInfo column : allColumns) {
+                    if (column.getId().equals(columnId)) {
+                        selectedColumns.add(column);
+                        break;
+                    }
+                }
+            }
+            // 如果没有选中任何列，默认导出所有列
+            if (selectedColumns.isEmpty()) {
+                selectedColumns = allColumns;
+            }
+        }
+        
+        // 创建表头
         Row headerRow = sheet.createRow(0);
-        for (int i = 0; i < headers.length; i++) {
+        for (int i = 0; i < selectedColumns.size(); i++) {
             Cell cell = headerRow.createCell(i);
-            cell.setCellValue(headers[i]);
+            cell.setCellValue(selectedColumns.get(i).getName());
             cell.setCellStyle(headerStyle);
         }
         
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        
+        // 填充数据
         for (int i = 0; i < issues.size(); i++) {
             Issue issue = issues.get(i);
             Row row = sheet.createRow(i + 1);
             
-            row.createCell(0).setCellValue(issue.getId() != null ? issue.getId() : 0);
-            row.createCell(1).setCellValue(issue.getTitle() != null ? issue.getTitle() : "");
-            row.createCell(2).setCellValue(issue.getDescription() != null ? issue.getDescription() : "");
-            row.createCell(3).setCellValue(issue.getStatus() != null ? issue.getStatus() : "");
-            row.createCell(4).setCellValue(issue.getPriority() != null ? issue.getPriority() : "");
-            row.createCell(5).setCellValue(issue.getProcessStatus() != null ? issue.getProcessStatus() : "");
-            row.createCell(6).setCellValue(issue.getReviewStatus() != null ? issue.getReviewStatus() : "");
-            row.createCell(7).setCellValue(issue.getReviewComment() != null ? issue.getReviewComment() : "");
-            row.createCell(8).setCellValue(issue.getResolution() != null ? issue.getResolution() : "");
-            row.createCell(9).setCellValue(issue.getRegressionResult() != null ? issue.getRegressionResult() : "");
-            row.createCell(10).setCellValue(issue.getReporterId() != null ? issue.getReporterId() : 0);
-            row.createCell(11).setCellValue(issue.getAssigneeId() != null ? issue.getAssigneeId() : 0);
-            row.createCell(12).setCellValue(issue.getCreatedAt() != null ? dateFormat.format(issue.getCreatedAt()) : "");
-            row.createCell(13).setCellValue(issue.getUpdatedAt() != null ? dateFormat.format(issue.getUpdatedAt()) : "");
-            
+            for (int j = 0; j < selectedColumns.size(); j++) {
+                ColumnInfo column = selectedColumns.get(j);
+                Cell cell = row.createCell(j);
+                cell.setCellValue(column.getValue(issue));
+            }
         }
         
         // 计算每列的最大宽度
-        int[] maxWidths = new int[headers.length];
+        int[] maxWidths = new int[selectedColumns.size()];
         
         // 先计算表头的宽度
-        for (int j = 0; j < headers.length; j++) {
-            maxWidths[j] = headers[j].length();
+        for (int j = 0; j < selectedColumns.size(); j++) {
+            maxWidths[j] = selectedColumns.get(j).getName().length();
         }
         
         // 计算数据行的宽度
         for (int i = 0; i < issues.size(); i++) {
             Issue issue = issues.get(i);
             
-            // ID
-            maxWidths[0] = Math.max(maxWidths[0], String.valueOf(issue.getId() != null ? issue.getId() : 0).length());
-            // 标题
-            maxWidths[1] = Math.max(maxWidths[1], (issue.getTitle() != null ? issue.getTitle() : "").length());
-            // 描述
-            maxWidths[2] = Math.max(maxWidths[2], (issue.getDescription() != null ? issue.getDescription() : "").length());
-            // 状态
-            maxWidths[3] = Math.max(maxWidths[3], (issue.getStatus() != null ? issue.getStatus() : "").length());
-            // 优先级
-            maxWidths[4] = Math.max(maxWidths[4], (issue.getPriority() != null ? issue.getPriority() : "").length());
-            // 流程状态
-            maxWidths[5] = Math.max(maxWidths[5], (issue.getProcessStatus() != null ? issue.getProcessStatus() : "").length());
-            // 审核状态
-            maxWidths[6] = Math.max(maxWidths[6], (issue.getReviewStatus() != null ? issue.getReviewStatus() : "").length());
-            // 审核意见
-            maxWidths[7] = Math.max(maxWidths[7], (issue.getReviewComment() != null ? issue.getReviewComment() : "").length());
-            // 处理结果
-            maxWidths[8] = Math.max(maxWidths[8], (issue.getResolution() != null ? issue.getResolution() : "").length());
-            // 回归结果
-            maxWidths[9] = Math.max(maxWidths[9], (issue.getRegressionResult() != null ? issue.getRegressionResult() : "").length());
-            // 报告人ID
-            maxWidths[10] = Math.max(maxWidths[10], String.valueOf(issue.getReporterId() != null ? issue.getReporterId() : 0).length());
-            // 指派人ID
-            maxWidths[11] = Math.max(maxWidths[11], String.valueOf(issue.getAssigneeId() != null ? issue.getAssigneeId() : 0).length());
-            // 创建时间
-            maxWidths[12] = Math.max(maxWidths[12], (issue.getCreatedAt() != null ? dateFormat.format(issue.getCreatedAt()) : "").length());
-            // 更新时间
-            maxWidths[13] = Math.max(maxWidths[13], (issue.getUpdatedAt() != null ? dateFormat.format(issue.getUpdatedAt()) : "").length());
+            for (int j = 0; j < selectedColumns.size(); j++) {
+                ColumnInfo column = selectedColumns.get(j);
+                String value = column.getValue(issue);
+                maxWidths[j] = Math.max(maxWidths[j], value.length());
+            }
         }
         
         // 设置每列的宽度（256是一个字符的宽度单位，乘以2是为了给中文字符留出空间）
-        for (int j = 0; j < headers.length; j++) {
+        for (int j = 0; j < selectedColumns.size(); j++) {
             // 为中文字符和边距留出空间
             int width = (maxWidths[j] + 2) * 256 * 2;
             sheet.setColumnWidth(j, width);
@@ -380,11 +392,36 @@ public class IssueServiceImpl implements IssueService {
         workbook.write(outputStream);
         workbook.close();
         
-        LogUtil.logBusiness(logger, "Excel导出", "成功导出 " + issues.size() + " 条问题单记录到Excel");
+        LogUtil.logBusiness(logger, "Excel导出", "成功导出 " + issues.size() + " 条问题单记录到Excel，导出列数: " + selectedColumns.size());
         return outputStream;
         } catch (Exception e) {
             LogUtil.logError(logger, "导出问题单到Excel", e);
             throw e;
+        }
+    }
+    
+    // 列信息类
+    private static class ColumnInfo {
+        private final String id;
+        private final String name;
+        private final Function<Issue, String> valueExtractor;
+        
+        public ColumnInfo(String id, String name, Function<Issue, String> valueExtractor) {
+            this.id = id;
+            this.name = name;
+            this.valueExtractor = valueExtractor;
+        }
+        
+        public String getId() {
+            return id;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public String getValue(Issue issue) {
+            return valueExtractor.apply(issue);
         }
     }
 }

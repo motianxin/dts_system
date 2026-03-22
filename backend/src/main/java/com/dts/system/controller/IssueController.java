@@ -255,11 +255,12 @@ public class IssueController {
             @RequestParam(required = false) String priority,
             @RequestParam(required = false) String processStatus,
             @RequestParam(required = false) Long reporterId,
-            @RequestParam(required = false) Long assigneeId) {
-        logger.info("[API调用] 导出问题单到Excel - 状态: {}, 优先级: {}, 流程状态: {}", status, priority, processStatus);
+            @RequestParam(required = false) Long assigneeId,
+            @RequestParam(required = false) List<String> columns) {
+        logger.info("[API调用] 导出问题单到Excel - 状态: {}, 优先级: {}, 流程状态: {}, 选中列: {}", status, priority, processStatus, columns);
         try {
             List<Issue> issues = issueService.filterIssues(status, priority, processStatus, reporterId, assigneeId);
-            ByteArrayOutputStream outputStream = issueService.exportIssuesToExcel(issues);
+            ByteArrayOutputStream outputStream = issueService.exportIssuesToExcel(issues, columns);
             
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
             String fileName = "issues_" + dateFormat.format(new Date()) + ".xlsx";

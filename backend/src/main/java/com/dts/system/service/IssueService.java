@@ -20,5 +20,8 @@ public interface IssueService {
     Issue completeRegression(Long id, String regressionResult); // 完成回归
     // 筛选和导出方法
     List<Issue> filterIssues(String status, String priority, String processStatus, Long reporterId, Long assigneeId);
+    
     ByteArrayOutputStream exportIssuesToExcel(List<Issue> issues) throws Exception;
+    
+    ByteArrayOutputStream exportIssuesToExcel(List<Issue> issues, List<String> columns) throws Exception;
 }
