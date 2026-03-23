@@ -11,6 +11,11 @@
         <input type="password" id="password" v-model="form.password" required>
       </div>
       <button type="submit">登录</button>
+      <div class="divider">或</div>
+      <button @click="handleFeishuLogin" class="feishu-btn">
+        <span class="feishu-icon">飞书</span>
+        使用飞书扫码登录
+      </button>
       <p class="register-link">还没有账号？<router-link to="/register">立即注册</router-link></p>
     </form>
   </div>
@@ -32,6 +37,21 @@ export default {
       console.log('登录信息:', this.form)
       // 模拟登录成功，跳转到首页
       this.$router.push('/home')
+    },
+    async handleFeishuLogin() {
+      try {
+        // 获取飞书登录URL
+        const response = await fetch('/api/auth/feishu/login')
+        const data = await response.json()
+        
+        if (data.loginUrl) {
+          // 打开飞书登录页面
+          window.open(data.loginUrl, '_blank', 'width=600,height=400')
+        }
+      } catch (error) {
+        console.error('获取飞书登录URL失败:', error)
+        alert('获取飞书登录链接失败，请稍后重试')
+      }
     }
   }
 }
@@ -100,5 +120,55 @@ button:hover {
 
 .register-link a:hover {
   text-decoration: underline;
+}
+
+.divider {
+  text-align: center;
+  margin: 15px 0;
+  color: #999;
+  position: relative;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 45%;
+  height: 1px;
+  background-color: #ddd;
+}
+
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 45%;
+  height: 1px;
+  background-color: #ddd;
+}
+
+.feishu-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feishu-btn:hover {
+  background-color: #0069d9;
+}
+
+.feishu-icon {
+  margin-right: 8px;
+  font-weight: bold;
 }
 </style>

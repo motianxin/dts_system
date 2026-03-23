@@ -17,4 +17,8 @@ public interface UserService {
     void deleteUser(Long id);
     User validateUser(String username, String password);
     List<User> getUsersByRole(String role);
+    
+    // 飞书相关方法
+    User getUserByFeishuUserId(String feishuUserId);
+    User createOrUpdateFeishuUser(User user);
 }
