@@ -4,6 +4,7 @@ import com.dts.system.model.User;
 import com.dts.system.service.UserService;
 import com.dts.system.util.FeishuAuthUtil;
 import com.dts.system.util.LogUtil;
+import com.lark.oapi.service.authen.v1.model.UserInfo;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.slf4j.Logger;
@@ -67,21 +68,20 @@ public class AuthController {
             logger.info("[API调用] 处理飞书回调 - code: {}, state: {}", code, state);
             
             // 根据授权码获取访问令牌
-            Map<String, Object> tokenData = feishuAuthUtil.getAccessToken(code);
-            String accessToken = (String) tokenData.get("access_token");
+            String accessToken = feishuAuthUtil.getAccessToken(code);
             
             // 根据访问令牌获取用户信息
-            Map<String, Object> userInfoData = feishuAuthUtil.getUserInfo(accessToken);
+            UserInfo userInfoData = feishuAuthUtil.getUserInfo(accessToken);
             
             // 创建或更新用户
             User user = new User();
-            user.setFeishuUserId((String) userInfoData.get("user_id"));
-            user.setFeishuOpenId((String) userInfoData.get("open_id"));
-            user.setFeishuUnionId((String) userInfoData.get("union_id"));
-            user.setFeishuAvatar((String) userInfoData.get("avatar_url"));
-            user.setFeishuName((String) userInfoData.get("name"));
-            user.setUsername((String) userInfoData.get("email") != null ? (String) userInfoData.get("email") : (String) userInfoData.get("name"));
-            user.setEmail((String) userInfoData.get("email"));
+            user.setFeishuUserId(userInfoData.getUserId());
+            user.setFeishuOpenId(userInfoData.getOpenId());
+            user.setFeishuUnionId(userInfoData.getUnionId());
+            user.setFeishuAvatar(userInfoData.getAvatarUrl());
+            user.setFeishuName(userInfoData.getName());
+            user.setUsername(userInfoData.getEmail() != null ? userInfoData.getEmail() : userInfoData.getName());
+            user.setEmail(userInfoData.getEmail());
             
             User savedUser = userService.createOrUpdateFeishuUser(user);
             

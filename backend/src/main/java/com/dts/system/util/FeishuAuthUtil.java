@@ -1,25 +1,30 @@
 package com.dts.system.util;
 
 import com.dts.system.config.FeishuConfig;
+import com.lark.oapi.Client;
+import com.lark.oapi.service.authen.v1.model.CreateAccessTokenReq;
+import com.lark.oapi.service.authen.v1.model.CreateAccessTokenReqBody;
+import com.lark.oapi.service.authen.v1.model.CreateAccessTokenResp;
+import com.lark.oapi.service.authen.v1.model.GetUserInfoReq;
+import com.lark.oapi.service.authen.v1.model.GetUserInfoResp;
+import com.lark.oapi.service.authen.v1.model.UserInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 @Component
 public class FeishuAuthUtil {
     
+    private final FeishuConfig feishuConfig;
+    private final Client client;
+    
     @Autowired
-    private FeishuConfig feishuConfig;
-    
-    private final WebClient webClient;
-    
     public FeishuAuthUtil(FeishuConfig feishuConfig) {
         this.feishuConfig = feishuConfig;
-        this.webClient = WebClient.create();
+        this.client = Client.newBuilder(feishuConfig.getAppId(), feishuConfig.getAppSecret())
+                .build();
     }
     
     /**
@@ -37,39 +42,34 @@ public class FeishuAuthUtil {
     /**
      * 根据授权码获取访问令牌
      */
-    public Map<String, Object> getAccessToken(String code) throws Exception {
-        Map<String, Object> response = webClient.post()
-                .uri("https://open.feishu.cn/open-apis/authen/v1/access_token")
-                .header("Content-Type", "application/json")
-                .bodyValue(Map.of(
-                        "app_id", feishuConfig.getAppId(),
-                        "app_secret", feishuConfig.getAppSecret(),
-                        "code", code
-                ))
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+    public String getAccessToken(String code) throws Exception {
+        CreateAccessTokenReq req = CreateAccessTokenReq.newBuilder()
+                .body(CreateAccessTokenReqBody.newBuilder()
+                        .grantType("authorization_code")
+                        .appSecret(feishuConfig.getAppSecret())
+                        .code(code)
+                        .build())
+                .build();
         
-        if (response == null || !"0".equals(response.get("code").toString())) {
-            throw new Exception("获取访问令牌失败: " + response);
+        CreateAccessTokenResp resp = client.authen().v1().accessToken().create(req);
+        if (!resp.success()) {
+            throw new Exception("获取访问令牌失败: " + resp.getMsg());
         }
-        return (Map<String, Object>) response.get("data");
+        return resp.getData().getAccessToken();
     }
     
     /**
      * 根据访问令牌获取用户信息
      */
-    public Map<String, Object> getUserInfo(String accessToken) throws Exception {
-        Map<String, Object> response = webClient.get()
-                .uri("https://open.feishu.cn/open-apis/authen/v1/user_info")
+    public UserInfo getUserInfo(String accessToken) throws Exception {
+        GetUserInfoReq req = GetUserInfoReq.newBuilder()
                 .header("Authorization", "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+                .build();
         
-        if (response == null || !"0".equals(response.get("code").toString())) {
-            throw new Exception("获取用户信息失败: " + response);
+        GetUserInfoResp resp = client.authen().v1().userInfo().get(req);
+        if (!resp.success()) {
+            throw new Exception("获取用户信息失败: " + resp.getMsg());
         }
-        return (Map<String, Object>) response.get("data");
+        return resp.getData();
     }
 }
