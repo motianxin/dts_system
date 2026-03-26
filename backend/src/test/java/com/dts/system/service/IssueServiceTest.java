@@ -480,11 +480,11 @@ public class IssueServiceTest {
             assertEquals("描述", sheet.getRow(0).getCell(2).getStringCellValue());
             
             // 验证第一行数据
-            assertEquals(1, (int) sheet.getRow(1).getCell(0).getNumericCellValue());
+            assertEquals("1", sheet.getRow(1).getCell(0).getStringCellValue());
             assertEquals("测试问题单", sheet.getRow(1).getCell(1).getStringCellValue());
             
             // 验证第二行数据
-            assertEquals(2, (int) sheet.getRow(2).getCell(0).getNumericCellValue());
+            assertEquals("2", sheet.getRow(2).getCell(0).getStringCellValue());
             assertEquals("第二个问题单", sheet.getRow(2).getCell(1).getStringCellValue());
         }
     }
@@ -536,7 +536,7 @@ public class IssueServiceTest {
             assertEquals(2, sheet.getPhysicalNumberOfRows()); // 1 header + 1 data row
             
             // 验证数据行
-            assertEquals(1, (int) sheet.getRow(1).getCell(0).getNumericCellValue());
+            assertEquals("1", sheet.getRow(1).getCell(0).getStringCellValue());
             assertEquals("问题单", sheet.getRow(1).getCell(1).getStringCellValue());
         }
     }

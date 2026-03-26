@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +27,9 @@ public class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private UserServiceImpl userService;
 
@@ -36,7 +40,7 @@ public class UserServiceTest {
         testUser = new User();
         testUser.setId(1L);
         testUser.setUsername("testuser");
-        testUser.setPassword("123456");
+        testUser.setPassword("Test123!"); // 强密码
         testUser.setEmail("test@example.com");
         testUser.setRole("TESTER");
     }
@@ -44,6 +48,7 @@ public class UserServiceTest {
     @Test
     void testCreateUser() {
         // 准备
+        when(passwordEncoder.encode(any(String.class))).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
         // 执行
@@ -149,6 +154,7 @@ public class UserServiceTest {
     void testValidateUser() {
         // 准备
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("123456", testUser.getPassword())).thenReturn(true);
 
         // 执行
         User result = userService.validateUser("testuser", "123456");
@@ -163,6 +169,7 @@ public class UserServiceTest {
     void testValidateUser_InvalidPassword() {
         // 准备
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("wrongpassword", testUser.getPassword())).thenReturn(false);
 
         // 执行
         User result = userService.validateUser("testuser", "wrongpassword");
@@ -175,7 +182,7 @@ public class UserServiceTest {
     @Test
     void testValidateUser_UserNotFound() {
         // 准备
-        when(userRepository.findByUsername("nonexistent")).thenReturn(null);
+        when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
 
         // 执行
         User result = userService.validateUser("nonexistent", "123456");

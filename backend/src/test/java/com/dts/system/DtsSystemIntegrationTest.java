@@ -7,10 +7,14 @@ import com.dts.system.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * DTS系统集成测试类
@@ -18,6 +22,16 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+    "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+    "spring.datasource.driver-class-name=org.h2.Driver",
+    "spring.datasource.username=sa",
+    "spring.datasource.password=",
+    "spring.jpa.hibernate.ddl-auto=create-drop",
+    "spring.jpa.show-sql=true",
+    "spring.jpa.properties.hibernate.format_sql=true",
+    "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
+})
 @Transactional
 public class DtsSystemIntegrationTest {
 
@@ -27,12 +41,18 @@ public class DtsSystemIntegrationTest {
     @Autowired
     private UserService userService;
 
+    @MockBean
+    private PasswordEncoder passwordEncoder;
+
     @Test
     void testCompleteDtsFlow() {
+        // 设置PasswordEncoder的mock行为
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        
         // 1. 创建测试人员
         User tester = new User();
         tester.setUsername("integration_tester");
-        tester.setPassword("123456");
+        tester.setPassword("Test123!"); // 强密码
         tester.setEmail("integration_tester@example.com");
         tester.setRole("TESTER");
         User savedTester = userService.createUser(tester);
@@ -41,7 +61,7 @@ public class DtsSystemIntegrationTest {
         // 2. 创建测试经理
         User testManager = new User();
         testManager.setUsername("integration_test_manager");
-        testManager.setPassword("123456");
+        testManager.setPassword("Test123!"); // 强密码
         testManager.setEmail("integration_test_manager@example.com");
         testManager.setRole("TEST_MANAGER");
         User savedTestManager = userService.createUser(testManager);
@@ -50,7 +70,7 @@ public class DtsSystemIntegrationTest {
         // 3. 创建开发人员
         User developer = new User();
         developer.setUsername("integration_developer");
-        developer.setPassword("123456");
+        developer.setPassword("Test123!"); // 强密码
         developer.setEmail("integration_developer@example.com");
         developer.setRole("DEVELOPER");
         User savedDeveloper = userService.createUser(developer);
@@ -59,7 +79,7 @@ public class DtsSystemIntegrationTest {
         // 4. 创建开发经理
         User devManager = new User();
         devManager.setUsername("integration_dev_manager");
-        devManager.setPassword("123456");
+        devManager.setPassword("Test123!"); // 强密码
         devManager.setEmail("integration_dev_manager@example.com");
         devManager.setRole("DEV_MANAGER");
         User savedDevManager = userService.createUser(devManager);
@@ -139,10 +159,13 @@ public class DtsSystemIntegrationTest {
 
     @Test
     void testReviewRejectedFlow() {
+        // 设置PasswordEncoder的mock行为
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        
         // 1. 创建测试人员
         User tester = new User();
         tester.setUsername("rejected_tester");
-        tester.setPassword("123456");
+        tester.setPassword("Test123!"); // 强密码
         tester.setEmail("rejected_tester@example.com");
         tester.setRole("TESTER");
         User savedTester = userService.createUser(tester);
@@ -150,7 +173,7 @@ public class DtsSystemIntegrationTest {
         // 2. 创建测试经理
         User testManager = new User();
         testManager.setUsername("rejected_test_manager");
-        testManager.setPassword("123456");
+        testManager.setPassword("Test123!"); // 强密码
         testManager.setEmail("rejected_test_manager@example.com");
         testManager.setRole("TEST_MANAGER");
         User savedTestManager = userService.createUser(testManager);
@@ -181,17 +204,25 @@ public class DtsSystemIntegrationTest {
 
     @Test
     void testUserAuthentication() {
+        // 设置PasswordEncoder的mock行为
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        when(passwordEncoder.matches(anyString(), anyString())).thenAnswer(invocation -> {
+            String rawPassword = invocation.getArgument(0);
+            String encodedPassword = invocation.getArgument(1);
+            return "Test123!".equals(rawPassword) && "encodedPassword".equals(encodedPassword);
+        });
+        
         // 1. 创建用户
         User user = new User();
         user.setUsername("auth_test_user");
-        user.setPassword("correct_password");
+        user.setPassword("Test123!"); // 强密码
         user.setEmail("auth_test@example.com");
         user.setRole("TESTER");
         User savedUser = userService.createUser(user);
         assertNotNull(savedUser.getId());
 
         // 2. 验证正确的用户名和密码
-        User authenticatedUser = userService.validateUser("auth_test_user", "correct_password");
+        User authenticatedUser = userService.validateUser("auth_test_user", "Test123!");
         assertNotNull(authenticatedUser);
         assertEquals("auth_test_user", authenticatedUser.getUsername());
 
