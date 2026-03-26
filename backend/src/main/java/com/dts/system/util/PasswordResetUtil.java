@@ -19,6 +19,13 @@ public class PasswordResetUtil {
     private PasswordEncoder passwordEncoder;
     
     /**
+     * 使用密码编码器加密密码
+     */
+    public String encodePassword(String rawPassword) {
+        return passwordEncoder.encode(rawPassword);
+    }
+    
+    /**
      * 生成强密码
      * 要求：至少8位，包含字母、数字和特殊符号
      */
