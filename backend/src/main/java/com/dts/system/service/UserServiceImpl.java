@@ -3,6 +3,7 @@ package com.dts.system.service;
 import com.dts.system.model.User;
 import com.dts.system.repository.UserRepository;
 import com.dts.system.util.LogUtil;
+import com.dts.system.util.PasswordValidator;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +25,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public User register(User user) {
         try {
+            // 验证密码强度
+            if (!PasswordValidator.validate(user.getPassword())) {
+                throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+            }
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             user.setRole("ROLE_USER");
             User savedUser = userRepository.save(user);
@@ -73,6 +78,10 @@ public class UserServiceImpl implements UserService {
     public User createUser(User user) {
         try {
             if (user.getPassword() != null) {
+                // 验证密码强度
+                if (!PasswordValidator.validate(user.getPassword())) {
+                    throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+                }
                 user.setPassword(passwordEncoder.encode(user.getPassword()));
             }
             User savedUser = userRepository.save(user);
@@ -123,6 +132,10 @@ public class UserServiceImpl implements UserService {
                     updatedUser.setUsername(user.getUsername());
                 }
                 if (user.getPassword() != null) {
+                    // 验证密码强度
+                    if (!PasswordValidator.validate(user.getPassword())) {
+                        throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+                    }
                     updatedUser.setPassword(passwordEncoder.encode(user.getPassword()));
                 }
                 if (user.getEmail() != null) {
@@ -182,87 +195,5 @@ public class UserServiceImpl implements UserService {
             LogUtil.logError(logger, "按角色查询用户 - 角色: " + role, e);
             throw e;
         }
-    }
-    
-    @Override
-    public User getUserByFeishuUserId(String feishuUserId) {
-        try {
-            Optional<User> user = userRepository.findByFeishuUserId(feishuUserId);
-            if (user.isPresent()) {
-                LogUtil.logBusiness(logger, "用户查询", "通过飞书用户ID查询用户: " + feishuUserId);
-                return user.get();
-            } else {
-                LogUtil.logWarn(logger, "通过飞书用户ID查询用户不存在: " + feishuUserId);
-                return null;
-            }
-        } catch (Exception e) {
-            LogUtil.logError(logger, "通过飞书用户ID查询用户 - ID: " + feishuUserId, e);
-            throw e;
-        }
-    }
-    
-    @Override
-    public User createOrUpdateFeishuUser(User user) {
-        try {
-            // 先尝试通过飞书用户ID查找用户
-            Optional<User> existingUser = userRepository.findByFeishuUserId(user.getFeishuUserId());
-            
-            if (existingUser.isPresent()) {
-                // 更新现有用户
-                User updatedUser = existingUser.get();
-                if (user.getFeishuOpenId() != null) {
-                    updatedUser.setFeishuOpenId(user.getFeishuOpenId());
-                }
-                if (user.getFeishuUnionId() != null) {
-                    updatedUser.setFeishuUnionId(user.getFeishuUnionId());
-                }
-                if (user.getFeishuAvatar() != null) {
-                    updatedUser.setFeishuAvatar(user.getFeishuAvatar());
-                }
-                if (user.getFeishuName() != null) {
-                    updatedUser.setFeishuName(user.getFeishuName());
-                }
-                if (user.getUsername() != null) {
-                    updatedUser.setUsername(user.getUsername());
-                }
-                if (user.getEmail() != null) {
-                    updatedUser.setEmail(user.getEmail());
-                }
-                if (user.getRole() != null) {
-                    updatedUser.setRole(user.getRole());
-                }
-                User savedUser = userRepository.save(updatedUser);
-                LogUtil.logBusiness(logger, "用户更新", "成功更新飞书用户: " + savedUser.getFeishuUserId());
-                return savedUser;
-            } else {
-                // 创建新用户
-                // 为飞书用户生成随机密码
-                String randomPassword = generateRandomPassword();
-                user.setPassword(passwordEncoder.encode(randomPassword));
-                // 默认为普通用户角色
-                if (user.getRole() == null) {
-                    user.setRole("ROLE_USER");
-                }
-                User savedUser = userRepository.save(user);
-                LogUtil.logBusiness(logger, "用户创建", "成功创建飞书用户: " + savedUser.getFeishuUserId());
-                return savedUser;
-            }
-        } catch (Exception e) {
-            LogUtil.logError(logger, "创建或更新飞书用户 - ID: " + user.getFeishuUserId(), e);
-            throw e;
-        }
-    }
-    
-    /**
-     * 生成随机密码
-     */
-    private String generateRandomPassword() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-        StringBuilder password = new StringBuilder();
-        for (int i = 0; i < 12; i++) {
-            int index = (int) (Math.random() * chars.length());
-            password.append(chars.charAt(index));
-        }
-        return password.toString();
     }
 }

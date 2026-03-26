@@ -18,10 +18,4 @@ public class User {
     private String password;
     private String email;
     private String role;
-    // 飞书相关字段
-    private String feishuUserId;
-    private String feishuOpenId;
-    private String feishuUnionId;
-    private String feishuAvatar;
-    private String feishuName;
 }
